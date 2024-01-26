@@ -1,0 +1,161 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage[UTF8]{ctex}
+% \usepackage[showframe]{geometry} %调整页边距showframe显示框架
+\usepackage{amsmath}  %数学环境
+\usepackage{paralist,bbding,pifont} %罗列环境
+\usepackage{lmodern}  %中文环境与amsmath格式冲突
+\usepackage{array,graphicx}  %插入表格、图片
+\usepackage{float}
+\usepackage{appendix}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{tocloft}  %目录
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+%\documentclass[tikz]{stanalone}	% 
+\usepackage{pgfplots}	
+\pgfplotsset{compat=newest}
+\renewcommand\cftsecdotsep{\cftdotsep}
+\renewcommand\cftsecleader{\cftdotfill{\cftsecdotsep}}
+\renewcommand {\cftdot}{$ \cdot $}
+\renewcommand {\cftdotsep}{1.5}
+\hypersetup{colorlinks=true,linkcolor=black}
+\usepackage[a4paper, portrait, margin=2.5cm]{geometry}
+\renewcommand{\baselinestretch}{1.25} %行间距取多倍行距（设置值为1.5）
+\setlength{\baselineskip}{20pt} 
+
+%% 页眉
+\usepackage{fancyhdr}
+\newcommand{\myname}{李佳}
+\newcommand{\myid}{2100010793}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\myid}
+\lhead{\myname}
+\cfoot{\thepage}
+
+%%%% Declare %%%
+\DeclareMathOperator{\Ran}{Ran}
+\DeclareMathOperator{\Dom}{Dom}
+\DeclareMathOperator{\Rank}{Rank}
+
+\newcommand{\md}{\mathrm{d}}
+\newcommand{\mR}{\mathbb{R}}
+\newcommand{\mbF}{\mathbb{F}}
+%%% Declare %%%
+\newtheorem{innercustomthm}{Problem}
+\newenvironment{prob}[1]
+{\renewcommand\theinnercustomthm{#1}\innercustomthm}
+{\endinnercustomthm}
+
+%%设置
+\title{\textbf{数值分析$\ $上机作业1}}
+\author{李佳~2100010793}
+\date{}
+
+%%正文
+
+\begin{document}
+\zihao{-4}
+\maketitle
+\begin{section}{问题描述}
+对函数$$f(x) = e^{\sin(x)} + \cos(4x), x\in [0,2\pi]$$在$x_k = kh,\ k=0,1,2,...,n$上进行周期三次样条插值, 
+$h = 2\pi/n$. 
+
+数值计算$e_h = \| f-S\|_{\infty}$, 并检验当$h\to 0$时$e_h\to 0$的收敛阶($e_h\sim O(h^p)$).
+\end{section}
+\begin{section}{算法描述}
+    三次样条插值是一种插值方法, 在给定插值节点函数值的条件下, 求一个分段三次多项式, 使之整体上是二阶连续可导的. 周期三次样条插值, 对边界条件
+    进行要求, 即要求$S'(x_0)=S'(x_n)$及$S''(x_0) = S''(x_n)$. 
+    
+    结合二点三次Hermite插值的想法, 考虑插值基函数$h_i(x),\hat{h}_i(x)$:
+    $$h_0(x) = \left\{\begin{aligned}
+        \alpha_0(x),\  & x\in[x_0,x_1],\\
+        0,\ & x\in[x_1,x_n],
+    \end{aligned}\right.,\quad \hat{h}_0(x) = \left\{\begin{aligned}
+        \beta_0(x),\  & x\in[x_0,x_1],\\
+        0,\ & x\in[x_1,x_n],
+    \end{aligned}\right.$$
+    $$h_n(x) = \left\{\begin{aligned}
+        0,\ & x\in[x_0,x_{n-1}],\\
+        \tilde{\alpha}_n(x),\  & x\in[x_{n-1},x_n],
+    \end{aligned}\right.,\quad \hat{h}_n(x) = \left\{\begin{aligned}
+        0,\ & x\in[x_0,x_{n-1}],\\
+        \tilde{\beta}_n(x),\  & x\in[x_{n-1},x_n],
+    \end{aligned}\right.$$
+    $$h_i(x) = \left\{\begin{aligned}
+        \tilde{\alpha}_i(x),\  & x\in[x_{i-1},x_i],\\
+        \alpha_i(x),\  & x\in[x_i,x_{i+1}],\\
+        0,\ & x\notin[x_{i-1},x_{i+1}],
+    \end{aligned}\right.,\quad \hat{h}_i(x) = \left\{\begin{aligned}
+        \tilde{\beta}_0(x),\  & x\in[x_{i-1},x_i],\\
+        \beta_i(x),\  & x\in[x_i,x_{i+1}],\\
+        0,\ & x\notin[x_{i-1},x_{i+1}],
+    \end{aligned}\right.,\quad i=1,2,...,n-1$$
+    其中$$\alpha_i(x) = (1+2\frac{x-x_i}{x_{i+1}-x_i})(\frac{x-x_{i+1}}{x_i-x_{i+1}})^2,\ \tilde{\alpha}_{i+1}(x) = (1+2\frac{x-x_{i+1}}{x_{i}-x_{i+1}})(\frac{x-x_{i}}{x_{i+1}-x_{i}})^2,$$
+    $$\beta_i(x) = (x-x_i)(\frac{x-x_{i+1}}{x_i-x_{i+1}})^2,\ \tilde{\beta}_{i+1}(x) = (x-x_{i+1})(\frac{x-x_{i}}{x_{i+1}-x_{i}})^2.$$
+
+    这样得到的插值基函数满足$h_i(x_j) = \delta_{ij},h_i'(x_j)=0,\hat{h}_i(x_j)=0,\hat{h}_i'(x_j)=\delta_{ij}$. 它们均是分段三次多项式, 且均是一阶连续可导的. 因此可将插值函数表示为:
+    $S_3(x) = \sum_{i=0}^n[y_ih_i(x)+m_i\hat{h}_i(x)]$, 其中$y_i = f(x_i)$, $m_i$待定. 只需求适当的$m_i$使得$S_3(x)$是二阶连续可导的, 并且满足边界条件, 可以得到下列线性方程组(边界条件$S'(x_0)=S'(x_n)$, 
+    可得$m_0=m_n$, 因此将其它方程中出现$m_n$的项归入$m_0$):
+
+    $$\begin{pmatrix}
+        2 & \lambda_0 & 0 & 0 & ... & 0 & 1-\lambda_0 \\
+        1-\lambda_1 & 2 & \lambda_1 & 0 &... &0 & 0 \\
+        0 & 1-\lambda_2 & 2 & \lambda_2 &... &0 & 0 \\
+         & & \ddots & \ddots & \ddots & &\\
+        \lambda_{n-1} & 0 & 0 & 0 &... & 2 & 1-\lambda_{n-1} \\
+    \end{pmatrix}
+    \begin{pmatrix}
+        m_0\\m_1\\m_2\\ \vdots \\m_{n-1}
+    \end{pmatrix} = 
+    \begin{pmatrix}
+        \mu_0\\\mu_1\\\mu_2\\\vdots \\\mu_{n-1}
+    \end{pmatrix},$$
+    其中$$\lambda_0 = \dfrac{x_n-x_{n-1}}{x_1-x_0+x_n-x_{n-1}},\ \lambda_i = \dfrac{x_i-x_{i-1}}{x_{i+1}-x_{i-1}},1\leq i\leq n-1;$$
+    $$\mu_0 = 3[\frac{1-\lambda_0}{x_n-x_{n-1}}(y_n-y_{n-1})+\frac{\lambda_0}{x_1-x_0}(y_1-y_0)],$$
+    $$\mu_i = 3[\frac{1-\lambda_i}{x_i-x_{i-1}}(y_i-y_{i-1})+\frac{\lambda_i}{x_{i+1}-x_i}(y_{i+1}-y_i)],1\leq i\leq n-1.$$
+    
+    这是一个严格对角占优矩阵, 因此解存在且唯一. 另外, 这是一个稀疏矩阵, 可通过稀疏的高斯消去法对矩阵进行LU分解后求解.
+    
+
+\end{section}
+
+\begin{section}{计算结果}
+对插值节点数$n=4,6,8,...,88,90$的情形(间距为$h=2\pi/n$)进行计算, 在$[0,2\pi]$上等距取10000个点$T=\{t_i\}$计算插值函数的数值与原函数的数值之差, 将其中绝对值的最大值$\|f-S\|_T$作为$\|f-S\|_{\infty}$的近似值.
+我们试图验证$n^4\|f-S\|_{\infty}=O(1)$, 因此作$n^4\|f-S\|_{T}$关于$n$的变化图如下图所示:
+
+    \begin{figure}[!htbp]
+        \centering
+    \begin{tikzpicture}[]
+        \begin{axis}[ xlabel=插值节点数$n$,  ylabel=$n^4\cdot\|S_3-f\|_{T}$] % sharp plot: 折线图，通过修改此类型，即可完成多种图形绘制
+            \addplot[mark=.,blue] coordinates{
+                ( 4 , 525.195057346358 ) ( 6 , 2552.2382234673323 ) ( 8 , 127.65404447282526 ) ( 10 , 3476.372093353408 ) ( 12 , 2624.033744762792 ) ( 14 , 2173.4701298922923 ) ( 16 , 1361.3447497211164 ) ( 18 , 1686.8107614983553 ) ( 20 , 1524.3896715943706 ) ( 22 , 1467.7075732587361 ) ( 24 , 1223.0417268092096 ) ( 26 , 1350.4932491250943 ) ( 28 , 1279.04409066257 ) ( 30 , 1280.2269131059375 ) ( 32 , 1163.5933314822614 ) ( 34 , 1234.6609606894335 ) ( 36 , 1186.1336621580842 ) ( 38 , 1203.37116129846 ) ( 40 , 1134.993058527698 ) ( 42 , 1180.9274444306955 ) ( 44 , 1140.8601273327797 ) ( 46 , 1164.2667947855805 ) ( 48 , 1119.2690431162482 ) ( 50 , 1151.551038230947 ) ( 52 , 1115.3492357996397 ) ( 54 , 1141.6210291047296 ) ( 56 , 1109.7382017121945 ) ( 58 , 1133.7155626346976 ) ( 60 , 1106.3356370695487 ) ( 62 , 1127.3175573559436 ) ( 64 , 1103.5212217792869 ) ( 66 , 1122.0655448699806 ) ( 68 , 1101.219899175811 ) ( 70 , 1117.7005381606841 ) ( 72 , 1099.2699387651628 ) ( 74 , 1114.0329643306536 ) ( 76 , 1097.6130618016123 ) ( 78 , 1110.9214317636254 ) ( 80 , 1096.2028829089832 ) ( 82 , 1108.2587198734388 ) ( 84 , 1094.984634316225 ) ( 86 , 1105.9623092598074 ) ( 88 , 1093.9543166550138 ) ( 90 , 1103.9678433380252 ) 
+            };\label{plot_one}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{$n^4\|f-S\|_{T}$关于$n$的变化图}
+    \end{figure}
+        
+\end{section}
+
+\begin{section}{简明分析}
+    我们试图验证$\|f-S\|_{\infty}=O((2\pi/n)^4)=O(n^{-4})$, 
+    只需验证: 
+    $n^4\|f-S\|_T + n^4(\|f-S\|_{\infty}-\|f-S\|_T)=O(1)$. 
+        
+    计算$C^2$函数在一列点$\{t_i\}$上的值, 设相邻点最大距离为$\delta$, 则最大值所在位置在某个区间$[t_k,t_{k+1}]$上. 由最大值处导数为0且导数满足Lipschitz条件, 可知$[t_k,t_{k+1}]$上导数为$O(\delta)$, 因此$t_k,t_{k+1}$上的数值与最大值的误差为$O(\delta^2)$. 由于取$\delta = 2\pi/10000$, 
+    可知对$n\leq 100$, $n^4(\|f-S\|_{\infty}-\|f-S\|_T)\leq 10^8O(10^{-8})=O(1)$, 可知在这一条件下只需验证$n^4\|f-S\|_T=O(1)$. 
+
+    由上图所示, $n^4\|f-S\|_T$在$n\geq 20$时趋于稳定, $n$继续增大时该值也没有明显增大, 因此$n^4\|f-S\|_T=O(1)$即有界得到了验证. 结合上述分析, 也得知$n^4\|f-S\|_{\infty}=O(1)$得到了验证, 
+    从而验证了三次样条插值的收敛阶为$O(h^4)$.
+    
+
+\end{section}
+\end{document}
